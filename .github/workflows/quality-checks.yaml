@@ -16,3 +16,4 @@ jobs:
   quality-tests:
     uses: POC-Vish/github-actions/.github/workflows/codeql-analysis.yml@main
     secrets: inherit
+    
