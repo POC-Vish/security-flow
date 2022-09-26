@@ -1,0 +1,104 @@
+name: Build and Deploy Image to Dev and Test
+on:
+  push:
+    paths-ignore:
+      - '.github/**'
+      - '*.md'
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+  actions: read
+
+jobs:
+
+  build-image:
+    uses: mclm-dps/reusable-workflow-build-image/.github/workflows/build-image.yml@v1.0.1 # Add Release Version
+    secrets: inherit
+    with:
+      tags: ghcr.io/${{ github.repository }}/helloworld:${{ github.sha }} #Add App Name
+
+  push-gcr-image-d:
+    needs: build-image
+    uses: mclm-dps/reusable-workflow-push-gcr-image/.github/workflows/push-gcr-image.yml@v1.1.0 # Add Release Version
+    secrets: inherit
+    with:
+      image_src: ghcr.io/${{ github.repository }}/helloworld:${{ github.sha }} #Add App Name
+      image_dest: gcr.io/ml-fpt-cdh-aregistry-d-399b/helloworld:${{ github.sha }} #Add GCR Project ID and App Name
+      environment: development
+      gcr_project_id: ml-fpt-cdh-aregistry-d-399b #Add GCR Project ID
+      gcp-auth-method: credentials_json
+
+  # push-gcr-image-d:
+  #   uses: mclm-dps/reusable-workflow-push-gcr-image/.github/workflows/push-gcr-image.yml@developer/atreadwell # Add Release Version
+  #   secrets: inherit
+  #   with:
+  #     image_src: docker.io/digitalocean/flask-helloworld #Add App Name
+  #     image_dest: gcr.io/ml-fpt-cdh-aregistry-d-399b/helloworld:${{ github.sha }} #Add GCR Project ID and App Name
+  #     environment: development
+  #     gcr_project_id: ml-fpt-cdh-aregistry-d-399b #Add GCR Project ID
+  #     gcp-auth-method: credentials_json
+
+  deploy-cloudrun-central:
+    needs: push-gcr-image-d
+    uses: mclm-dps/reusable-workflow-deploy-cloudrun/.github/workflows/deploy-cloudrun.yml@developer/atreadwell # Add Release Version
+    secrets: inherit
+    with:
+      enable_beta: false
+      image_tag: ${{ github.sha }}
+      github_environment: development
+      gcp_environment: d
+      regions: >-
+        ["us-central1"]
+      app: helloworld # Add App Name
+      gcr_project_id: ml-fpt-cdh-aregistry-d-399b #Add GCR Project ID
+      gcp_project_id: ml-fpt-cdh-pat-app-d-d87d #Add GCP Project ID
+      flags: "--port=3000 --ingress=internal-and-cloud-load-balancing --vpc-connector=cdp-connector --vpc-egress=all-traffic --service-account=s6-fpt-cdh-pat-cloudrun-d@ml-fpt-cdh-pat-app-d-d87d.iam.gserviceaccount.com" # Update with required flags
+      gcp-auth-method: credentials_json
+      env_vars: |
+        REGION=us-central1
+
+  deploy-cloudrun-east:
+    needs: push-gcr-image-d
+    uses: mclm-dps/reusable-workflow-deploy-cloudrun/.github/workflows/deploy-cloudrun.yml@developer/atreadwell # Add Release Version
+    secrets: inherit
+    with:
+      enable_beta: true
+      image_tag: ${{ github.sha }}
+      github_environment: development
+      gcp_environment: d
+      regions: >-
+        ["us-east1"]
+      app: helloworld # Add App Name
+      gcr_project_id: ml-fpt-cdh-aregistry-d-399b #Add GCR Project ID
+      gcp_project_id: ml-fpt-cdh-pat-app-d-d87d #Add GCP Project ID
+      flags: "--port=3000 --ingress=internal-and-cloud-load-balancing --vpc-connector=cdp-connector --vpc-egress=all-traffic --service-account=s6-fpt-cdh-pat-cloudrun-d@ml-fpt-cdh-pat-app-d-d87d.iam.gserviceaccount.com" # Update with required flags
+      gcp-auth-method: credentials_json
+      env_vars: |
+        REGION=us-east1
+
+  cloudrun-gates:
+    needs: [deploy-cloudrun-central, deploy-cloudrun-east]
+    uses: mclm-dps/reusable-workflow-cloudrun-gates/.github/workflows/cloudrun-quality-gates.yaml@v0.0.1 # Add Release Version
+    secrets: inherit
+
+  promote-live:
+    needs: cloudrun-gates
+    uses: mclm-dps/reusable-workflow-cloudrun-promote/.github/workflows/cloudrun-promote-live.yaml@v1.1.0 # Add Release Version
+    secrets: inherit
+    with:
+      github_environment: development
+      gcp_environment: d
+      regions: >-
+        ["us-central1","us-east1"]
+      app: helloworld # Add App Name
+      gcp_project_id: ml-fpt-cdh-pat-app-d-d87d #Add GCP Project ID
+      gcp-auth-method: credentials_json
+
+  # Placholder for Push Image to T
+
+  # Placholder for Deploy CloudRun to T
