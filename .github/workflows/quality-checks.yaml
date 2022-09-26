@@ -14,5 +14,5 @@ permissions:
 jobs:
 
   quality-tests:
-    uses: mclm-dps/reusable-workflow-nodejs-quality-checks/.github/workflows/codeql-analysis.yml@ghas-demo
+    uses: POC-Vish/github-actions/.github/workflows/quality-checks.yml@v0.0.1
     secrets: inherit
