@@ -5,14 +5,14 @@ on:
       - main
   workflow_dispatch:
   
-permissions:
-  contents: read
-  id-token: write
-  packages: write
-  actions: read
+#permissions:
+#  contents: read
+#  id-token: write
+#  packages: write
+#  actions: read
 
 jobs:
-
   quality-tests:
+    permissions: write-all
     uses: POC-Vish/github-actions/.github/workflows/codeql-analysis.yml@main
     secrets: inherit
