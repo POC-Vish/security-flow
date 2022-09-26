@@ -13,6 +13,6 @@ on:
 
 jobs:
   quality-tests:
-    permissions: write-all
-    uses: POC-Vish/github-actions/.github/workflows/codeql-analysis.yml@main
+#    permissions: write-all
+    uses: POC-Vish/github-actions/.github/workflows/quality-checks.yml@main
     secrets: inherit
